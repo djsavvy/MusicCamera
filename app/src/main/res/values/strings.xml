@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Music Camera</string>
+
+    <string name="title_activity_fullscreen_camera">FullscreenCameraActivity</string>
 </resources>
