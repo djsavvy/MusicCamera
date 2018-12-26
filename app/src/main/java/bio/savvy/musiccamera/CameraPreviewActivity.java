@@ -27,7 +27,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         // Check permissions, and request if necessary
-        if(!havePermissions()) requestPermissionsFromUser();
+        requestPermissionsFromUser();
 
         // Initialize cameraManager_
         cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
@@ -43,6 +43,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
     }
 
     private void requestPermissionsFromUser() {
+        if(havePermissions()) {
+            Log.i(LOG_TAG, "Already have permissions. Don't need to request again.");
+            return;
+        }
+
         // Show request permission rationale
         Log.i(LOG_TAG, "Requesting permissions from user...");
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
@@ -71,6 +76,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                 // If not granted, show dialog saying the app is unusable without permissions and try again
                 if(!(grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     requestPermissionsFromUser();
+                    // TODO: Check if the user clicked "do not show again" and show different prompt in that case
                 }
         }
     }
