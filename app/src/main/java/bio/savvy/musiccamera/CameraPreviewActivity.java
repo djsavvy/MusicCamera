@@ -1,13 +1,12 @@
 package bio.savvy.musiccamera;
 
 import android.Manifest;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
-import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -54,6 +53,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
         }
 
         Log.i(LOG_TAG, "List of cameras: " + Arrays.toString(cameraIDsList));
+
+        // TODO: Add support for choosing among multiple cameras
+
+
+
 
 
 
