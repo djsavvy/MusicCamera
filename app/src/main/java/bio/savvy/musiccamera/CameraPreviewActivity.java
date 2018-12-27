@@ -1,10 +1,13 @@
 package bio.savvy.musiccamera;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -12,13 +15,19 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
+
+import java.util.Arrays;
 
 public class CameraPreviewActivity extends AppCompatActivity {
 
     // Permission constants
     private static final int PERMISSION_CAMERA = 0;
 
+    // Logging
     private static final String LOG_TAG = "CameraPreviewActivity";
+
+    // Camera management
     private CameraManager cameraManager_;
 
     @Override
@@ -29,8 +38,24 @@ public class CameraPreviewActivity extends AppCompatActivity {
         // Check permissions, and request if necessary
         requestPermissionsFromUser();
 
-        // Initialize cameraManager_
+        // Initialize camera management
         cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        String[] cameraIDsList = {};
+        try {
+            cameraIDsList = cameraManager_.getCameraIdList();
+        } catch (CameraAccessException e) {
+            // Unclear from documentation why this would ever be thrown
+            e.printStackTrace();
+            this.finish();
+        }
+        if(cameraIDsList.length == 0) {
+            Toast.makeText(this, "No cameras available. Cannot record video.", Toast.LENGTH_SHORT).show();
+            this.finish();
+        }
+
+        Log.i(LOG_TAG, "List of cameras: " + Arrays.toString(cameraIDsList));
+
+
 
 
 
