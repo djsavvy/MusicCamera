@@ -93,12 +93,28 @@ public class CameraPreviewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i(LOG_TAG, "starting onCreate");
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_camera_preview);
 
         // Check permissions, and request if necessary
-        requestPermissionsFromUser();
+        // This will set up the preview for us too
+        if(!havePermissions()) {
+            requestPermissionsFromUser();
+        }
+        else {
+            instantiatePreview();
+        }
 
+    }
+
+
+    private void instantiatePreview() {
+        // Check if the preview has already been instantiated -- if so, return
+        if(cameraDevice_ != null) {
+            Log.i(LOG_TAG, "Preview already instantiated");
+            return;
+        }
+
+        Log.i(LOG_TAG, "Instantiating preview");
         // Initialize camera management
         cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         String[] cameraIDsList = {};
@@ -136,7 +152,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                 Log.i(LOG_TAG, "Didn't have permissions from user");
             }
             cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
-            Log.e(LOG_TAG, "Camera managed opened camera " + cameraID);
+            Log.e(LOG_TAG, "Camera manager opened camera " + cameraID);
         } catch (CameraAccessException e) {
             e.printStackTrace();
             this.finish();
@@ -159,7 +175,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-
     }
 
     private boolean havePermissions() {
@@ -170,7 +185,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
     private void requestPermissionsFromUser() {
         if(havePermissions()) {
             Log.i(LOG_TAG, "Already have permissions. Don't need to request again.");
-            return;
+//            return;
         }
 
         // Show request permission rationale
@@ -200,8 +215,13 @@ public class CameraPreviewActivity extends AppCompatActivity {
             case PERMISSION_CAMERA:
                 // If not granted, show dialog saying the app is unusable without permissions and try again
                 if(!(grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    // User did not grant us permissions
                     requestPermissionsFromUser();
                     // TODO: Check if the user clicked "do not show again" and show different prompt in that case
+                }
+                else {
+                    // Permissions granted -- set up preview
+                    instantiatePreview();
                 }
         }
     }
