@@ -94,6 +94,16 @@ public class CameraPreviewActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (!permissionManager_.haveAllPermissions()) {
+            // We still need more permissions
+            permissionManager_.requestNextPermissionFromUser();
+        } else {
+            // Permissions granted -- set up preview
+            instantiatePreview();
+        }
+    }
 
     private void instantiatePreview() {
         // Check if the preview has already been instantiated -- if so, return
@@ -169,14 +179,4 @@ public class CameraPreviewActivity extends AppCompatActivity {
         */
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (!permissionManager_.haveAllPermissions()) {
-            // We still need more permissions
-            permissionManager_.requestNextPermissionFromUser();
-        } else {
-            // Permissions granted -- set up preview
-            instantiatePreview();
-        }
-    }
 }
