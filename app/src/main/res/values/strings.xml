@@ -5,4 +5,5 @@
 
     <string name="title_camera_permission_dialog">Camera Permission Required</string>
     <string name="text_camera_permission_required">Access to the camera is required to use this app. Please accept the permission in the following popup.</string>
+    <string name="no_cameras_available">No cameras available. Cannot record video.</string>
 </resources>

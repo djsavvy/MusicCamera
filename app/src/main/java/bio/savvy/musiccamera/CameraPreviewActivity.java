@@ -7,13 +7,17 @@ import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.widget.Toast;
 
 import java.util.Arrays;
@@ -29,10 +33,18 @@ public class CameraPreviewActivity extends AppCompatActivity {
     // Camera management
     private CameraManager cameraManager_;
 
+    // Preview
+    private SurfaceView previewSurface_;
+    private SurfaceHolder previewHolder_;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.i(LOG_TAG, "starting onCreate");
         super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_camera_preview);
 
         // Check permissions, and request if necessary
         requestPermissionsFromUser();
@@ -48,13 +60,35 @@ public class CameraPreviewActivity extends AppCompatActivity {
             this.finish();
         }
         if(cameraIDsList.length == 0) {
-            Toast.makeText(this, "No cameras available. Cannot record video.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.no_cameras_available), Toast.LENGTH_SHORT).show();
             this.finish();
         }
 
         Log.i(LOG_TAG, "List of cameras: " + Arrays.toString(cameraIDsList));
 
+
+        // Choose a camera
         // TODO: Add support for choosing among multiple cameras
+        String cameraID = cameraIDsList[0];
+        StreamConfigurationMap config = null;
+        try {
+            config = cameraManager_.getCameraCharacteristics(cameraID).get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "CameraAccessException", Toast.LENGTH_SHORT).show();
+            this.finish();
+        }
+
+        // Set up preview
+        previewSurface_ = new SurfaceView(this);
+        previewHolder_ = previewSurface_.getHolder();
+//        Size[] potentialPreviewSizes = config.getOutputSizes(previewSurface_.getClass());
+//        Log.e(LOG_TAG, "potentialPreviewSizes: " + Arrays.toString(potentialPreviewSizes));
+//        Arrays.sort(potentialPreviewSizes);
+        previewHolder_.setSizeFromLayout();
+        ConstraintLayout previewLayout = findViewById(R.id.previewLayout);
+        previewLayout.addView(previewSurface_);
+
 
 
 
