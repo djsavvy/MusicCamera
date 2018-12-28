@@ -4,6 +4,10 @@
     <string name="title_activity_fullscreen_camera">FullscreenCameraActivity</string>
 
     <string name="title_camera_permission_dialog">Camera Permission Required</string>
-    <string name="text_camera_permission_required">Access to the camera is required to use this app. Please accept the permission in the following popup.</string>
+    <string name="text_camera_permission_dialog">Access to the camera is required to use this app. Please accept the permission in the following popup.</string>
+
+    <string name="title_write_ext_storage_permission_dialog">Write External Storage Permission Required</string>
+    <string name="text_write_ext_permission_dialog">Write access to the external storage is required to use this app. Please accept the permission in the following popup.</string>
+
     <string name="no_cameras_available">No cameras available. Cannot record video.</string>
 </resources>

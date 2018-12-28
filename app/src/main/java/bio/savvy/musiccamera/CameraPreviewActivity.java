@@ -1,20 +1,17 @@
 package bio.savvy.musiccamera;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
-import android.hardware.camera2.params.StreamConfigurationMap;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
+import android.support.annotation.StringRes;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
@@ -23,14 +20,12 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.widget.Toast;
 
-import java.util.Arrays;
+import java.util.TreeMap;
 
 public class CameraPreviewActivity extends AppCompatActivity {
 
-    // Permission constants
-    private static final int PERMISSION_CAMERA = 0;
+    // TODO:  Split off permission checks into a different class
 
     // Logging
     private static final String LOG_TAG = "CameraPreviewActivity";
@@ -97,13 +92,12 @@ public class CameraPreviewActivity extends AppCompatActivity {
 
         // Check permissions, and request if necessary
         // This will set up the preview for us too
-        if(!havePermissions()) {
-            requestPermissionsFromUser();
+        if(!haveAllPermissions()) {
+            requestNextPermissionFromUser();
         }
         else {
             instantiatePreview();
         }
-
     }
 
 
@@ -115,6 +109,8 @@ public class CameraPreviewActivity extends AppCompatActivity {
         }
 
         Log.i(LOG_TAG, "Instantiating preview");
+
+        /*
         // Initialize camera management
         cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         String[] cameraIDsList = {};
@@ -148,7 +144,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
         // Open the camera
         try {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionsFromUser();
+                requestNextPermissionFromUser();
                 Log.i(LOG_TAG, "Didn't have permissions from user");
             }
             cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
@@ -175,56 +171,80 @@ public class CameraPreviewActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+        */
     }
 
-    private boolean havePermissions() {
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED);
-    }
-
-    private void requestPermissionsFromUser() {
-        if(havePermissions()) {
-            Log.i(LOG_TAG, "Already have permissions. Don't need to request again.");
-//            return;
+    // Permission request constants
+    private static final String[] allPermissions_ = {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+    private static final TreeMap<String, Integer> permissionRequestConstants_;
+    static {
+        permissionRequestConstants_ = new TreeMap<>();
+        for(String p : allPermissions_) {
+            permissionRequestConstants_.put(p, permissionRequestConstants_.size());
         }
+    }
 
+    private boolean haveAllPermissions() {
+        for(String p : allPermissions_) {
+            if(!havePermission(p)) return false;
+        }
+        return true;
+    }
+
+    private boolean havePermission(String permission) {
+        return (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    private void requestPermissionFromSystem(String permission) {
+        ActivityCompat.requestPermissions(this, new String[]{permission}, permissionRequestConstants_.get(permission));
+        // Control is transferred to onRequestPermissionsResult() from here
+    }
+
+    private void requestPermissionFromUser(final String permission, @StringRes int dialogTitle, @StringRes int dialogText, @DrawableRes int iconID) {
         // Show request permission rationale
-        Log.i(LOG_TAG, "Requesting permissions from user...");
+        Log.i(LOG_TAG, "Requesting permission " + permission + " from user.");
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
-        alertBuilder.setTitle(R.string.title_camera_permission_dialog)
-                .setMessage(R.string.text_camera_permission_required)
+        alertBuilder.setTitle(dialogTitle)
+                .setMessage(dialogText)
                 .setPositiveButton(android.R.string.ok, null)
                 .setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        Log.i(LOG_TAG,"User dismissed dialog... requesting camera permissions from system");
-                        requestCameraPermissionFromSystem();
+                        Log.i(LOG_TAG, "User dismissed dialog... requesting permission " + permission + " from system");
+                        requestPermissionFromSystem(permission);
                     }
                 })
-                .setIcon(android.R.drawable.ic_menu_camera)
+                .setIcon(iconID)
                 .show();
     }
 
-    private void requestCameraPermissionFromSystem() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CAMERA);
+    private void requestNextPermissionFromUser() {
+        /* This pattern of checking for a permission then returning lets us ask for the permissions
+        one by one by alternating control between this method and onRequestPermissionsResult().
+         */
+
+        if(!havePermission(Manifest.permission.CAMERA)) {
+            requestPermissionFromUser(Manifest.permission.CAMERA, R.string.title_camera_permission_dialog,
+                    R.string.text_camera_permission_dialog, android.R.drawable.ic_menu_camera);
+            return;
+        }
+
+        if(!havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            requestPermissionFromUser(Manifest.permission.WRITE_EXTERNAL_STORAGE, R.string.title_write_ext_storage_permission_dialog,
+                    R.string.text_write_ext_permission_dialog, android.R.drawable.stat_notify_sdcard);
+            return;
+        }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch(requestCode) {
-            case PERMISSION_CAMERA:
-                // If not granted, show dialog saying the app is unusable without permissions and try again
-                if(!(grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    // User did not grant us permissions
-                    requestPermissionsFromUser();
-                    // TODO: Check if the user clicked "do not show again" and show different prompt in that case
-                }
-                else {
-                    // Permissions granted -- set up preview
-                    instantiatePreview();
-                }
+        if (!haveAllPermissions()) {
+            // We still need more permissions
+            requestNextPermissionFromUser();
+        } else {
+            // Permissions granted -- set up preview
+            instantiatePreview();
         }
     }
-
 
 }
