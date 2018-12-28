@@ -12,31 +12,25 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 
-import java.util.TreeMap;
-
-public class PermissionManager {
+class PermissionManager {
 
     // Activity and Context
-    private Activity activity_;
+    private final Activity activity_;
 
     // Permissions
-    private String[] allPermissions_;
-    private TreeMap<String, Integer> permissionRequestConstants_;
+    private final String[] allPermissions_;
 
     // Logging
-    private String LOG_TAG;
+    private final String LOG_TAG;
 
 
     public PermissionManager(@NonNull final Activity activity, @NonNull String[] permissions, @NonNull String logTag) {
         this.activity_ = activity;
         this.allPermissions_ = permissions;
-        permissionRequestConstants_ = new TreeMap<>();
-        for(String p : allPermissions_) {
-            permissionRequestConstants_.put(p, permissionRequestConstants_.size());
-        }
         this.LOG_TAG = logTag;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean haveAllPermissions() {
         for(String p : allPermissions_) {
             if(!havePermission(p)) return false;
@@ -44,12 +38,14 @@ public class PermissionManager {
         return true;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean havePermission(String permission) {
         return (ContextCompat.checkSelfPermission(activity_, permission) == PackageManager.PERMISSION_GRANTED);
     }
 
-    public void requestPermissionFromSystem(String permission) {
-        ActivityCompat.requestPermissions(activity_, new String[]{permission}, permissionRequestConstants_.get(permission));
+    private void requestPermissionFromSystem(String permission) {
+        // Note that we always use the same request code
+        ActivityCompat.requestPermissions(activity_, new String[]{permission}, 0);
         // Control is transferred to onRequestPermissionsResult() from here
     }
 
@@ -71,6 +67,7 @@ public class PermissionManager {
                 .show();
     }
 
+    @SuppressWarnings("UnnecessaryReturnStatement")
     public void requestNextPermissionFromUser() {
         /* This pattern of checking for a permission then returning lets us ask for the permissions
         one by one by alternating control between this method and onRequestPermissionsResult().

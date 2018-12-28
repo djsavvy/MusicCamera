@@ -1,8 +1,6 @@
 <resources>
     <string name="app_name">Music Camera</string>
 
-    <string name="title_activity_fullscreen_camera">FullscreenCameraActivity</string>
-
     <string name="title_camera_permission_dialog">Camera Permission Required</string>
     <string name="text_camera_permission_dialog">Access to the camera is required to use this app. Please accept the permission in the following popup.</string>
 
