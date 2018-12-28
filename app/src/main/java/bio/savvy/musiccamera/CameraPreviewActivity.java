@@ -5,8 +5,13 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
@@ -32,11 +37,56 @@ public class CameraPreviewActivity extends AppCompatActivity {
 
     // Camera management
     private CameraManager cameraManager_;
+    private CameraDevice cameraDevice_;
+    private final CameraDevice.StateCallback deviceStateCallback_ = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice_ = camera;
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            camera.close();
+            cameraDevice_ = null;
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+            this.onDisconnected(camera);
+        }
+    };
+    private CameraCaptureSession cameraCaptureSession_;
+    private CameraCaptureSession.StateCallback sessionStateCallback_ = new CameraCaptureSession.StateCallback() {
+        @Override
+        public void onConfigured(@NonNull CameraCaptureSession session) {
+            cameraCaptureSession_ = session;
+        }
+
+        @Override
+        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+            cameraCaptureSession_ = null;
+        }
+    };
+    private CameraCaptureSession.CaptureCallback sessionCaptureCallback_ = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+            super.onCaptureStarted(session, request, timestamp, frameNumber);
+        }
+
+        @Override
+        public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
+            super.onCaptureProgressed(session, request, partialResult);
+        }
+
+        @Override
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+        }
+    };
 
     // Preview
     private SurfaceView previewSurface_;
     private SurfaceHolder previewHolder_;
-
 
 
     @Override
@@ -59,7 +109,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
             e.printStackTrace();
             this.finish();
         }
-        if(cameraIDsList.length == 0) {
+        if (cameraIDsList.length == 0) {
             Toast.makeText(this, getString(R.string.no_cameras_available), Toast.LENGTH_SHORT).show();
             this.finish();
         }
@@ -79,6 +129,19 @@ public class CameraPreviewActivity extends AppCompatActivity {
             this.finish();
         }
 
+        // Open the camera
+        try {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionsFromUser();
+                Log.i(LOG_TAG, "Didn't have permissions from user");
+            }
+            cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
+            Log.e(LOG_TAG, "Camera managed opened camera " + cameraID);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+            this.finish();
+        }
+
         // Set up preview
         previewSurface_ = new SurfaceView(this);
         previewHolder_ = previewSurface_.getHolder();
@@ -89,15 +152,14 @@ public class CameraPreviewActivity extends AppCompatActivity {
         ConstraintLayout previewLayout = findViewById(R.id.previewLayout);
         previewLayout.addView(previewSurface_);
 
+        try {
+            cameraDevice_.createCaptureSession(Arrays.asList(previewHolder_.getSurface()), sessionStateCallback_, null);
+            CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            cameraCaptureSession_.setRepeatingRequest(requestBuilder.build(), sessionCaptureCallback_, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
 
-
-
-
-
-
-
-
-        setContentView(R.layout.activity_camera_preview);
     }
 
     private boolean havePermissions() {
