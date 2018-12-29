@@ -2,20 +2,17 @@ package bio.savvy.musiccamera;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.params.StreamConfigurationMap;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.Toast;
@@ -39,12 +36,63 @@ public class CameraPreviewActivity extends AppCompatActivity {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice_ = camera;
+            Log.e(LOG_TAG, "cameraDevice_ set to " + cameraDevice_.toString());
+
+            // Set up preview
+            previewSurfaceView_ = findViewById(R.id.previewSurfaceView);
+            previewHolder_ = previewSurfaceView_.getHolder();
+            previewHolder_.addCallback(new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder holder) {
+                    try {
+                        /* TODO: This is never getting called -- to fix this, create my own CameraPreview class that extends SurfaceView and implements SurfaceHolder.Callback
+                        https://stackoverflow.com/questions/5912053/surfacecreated-is-not-called
+                         */
+                        Log.e(LOG_TAG, "Surface Created");
+//                        previewHolder_.setSizeFromLayout();
+                        cameraDevice_.createCaptureSession(Collections.singletonList(previewHolder_.getSurface()), new CameraCaptureSession.StateCallback() {
+                            @Override
+                            public void onConfigured(@NonNull CameraCaptureSession session) {
+                                try {
+                                    CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                                    session.setRepeatingRequest(requestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                                        @Override
+                                        public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+                                            super.onCaptureStarted(session, request, timestamp, frameNumber);
+                                        }
+                                    }, null);
+                                } catch (CameraAccessException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                            @Override
+                            public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                            }
+                        }, null);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                    surfaceCreated(holder);
+                }
+
+                @Override
+                public void surfaceDestroyed(SurfaceHolder holder) {
+
+                }
+            });
         }
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
             camera.close();
             cameraDevice_ = null;
+            Log.i(LOG_TAG, "CameraDevice disconnected");
         }
 
         @Override
@@ -52,24 +100,9 @@ public class CameraPreviewActivity extends AppCompatActivity {
             this.onDisconnected(camera);
         }
     };
-    private CameraCaptureSession cameraCaptureSession_;
-    private CameraCaptureSession.StateCallback sessionStateCallback_ = new CameraCaptureSession.StateCallback() {
-        @Override
-        public void onConfigured(@NonNull CameraCaptureSession session) {
-            cameraCaptureSession_ = session;
-        }
-
-        @Override
-        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-            cameraCaptureSession_ = null;
-        }
-    };
-    private CameraCaptureSession.CaptureCallback sessionCaptureCallback_ = new CameraCaptureSession.CaptureCallback() {
-
-    };
 
     // Preview
-    private SurfaceView previewSurface_;
+    private SurfaceView previewSurfaceView_;
     private SurfaceHolder previewHolder_;
 
 
@@ -85,6 +118,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                 new String[]{Manifest.permission.CAMERA,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE},
                 LOG_TAG);
+        // If we add a permission, make sure to add it to manifest, as well as edit PermissionManager.requestNextPermissionFromUser()
 
         if(!permissionManager_.haveAllPermissions()) {
             permissionManager_.requestNextPermissionFromUser();
@@ -105,78 +139,63 @@ public class CameraPreviewActivity extends AppCompatActivity {
         }
     }
 
-    private void instantiatePreview() {
-        // Check if the preview has already been instantiated -- if so, return
-        if(cameraDevice_ != null) {
-            Log.i(LOG_TAG, "Preview already instantiated");
-            return;
+    private void initializeCameraManager() {
+        if(cameraManager_ == null) {
+            cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            Log.i(LOG_TAG, "Initialized CameraManager");
         }
+        else {
+            Log.i(LOG_TAG, "CameraManager already exists.");
+        }
+    }
+
+    private String[] getCameraIdList() {
+        initializeCameraManager();
+
+        try {
+            String[] idList = cameraManager_.getCameraIdList();
+
+            if (idList.length == 0) {
+                Toast.makeText(this, getString(R.string.no_cameras_available), Toast.LENGTH_LONG).show();
+                this.finishAndRemoveTask();
+            }
+
+            Log.i(LOG_TAG, "List of cameras: " + Arrays.toString(idList));
+            return idList;
+        } catch (CameraAccessException e) {
+            // Unclear from documentation (and source code) why this would ever be thrown
+            e.printStackTrace();
+            Toast.makeText(this, getString(R.string.no_cameras_available), Toast.LENGTH_LONG).show();
+            this.finishAndRemoveTask();
+            return new String[]{};
+        }
+    }
+
+    private void instantiatePreview() {
+        // TODO: Check if the preview has already been instantiated -- if so, return
 
         Log.i(LOG_TAG, "Instantiating preview");
 
-        /*
         // Initialize camera management
-        cameraManager_ = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        String[] cameraIDsList = {};
-        try {
-            cameraIDsList = cameraManager_.getCameraIdList();
-        } catch (CameraAccessException e) {
-            // Unclear from documentation why this would ever be thrown
-            e.printStackTrace();
-            this.finish();
-        }
-        if (cameraIDsList.length == 0) {
-            Toast.makeText(this, getString(R.string.no_cameras_available), Toast.LENGTH_SHORT).show();
-            this.finish();
-        }
-
-        Log.i(LOG_TAG, "List of cameras: " + Arrays.toString(cameraIDsList));
-
+        initializeCameraManager();
+        String[] cameraIDsList = getCameraIdList();
+        // Exit if no cameras available
+        if(cameraIDsList.length == 0) return;
 
         // Choose a camera
         // TODO: Add support for choosing among multiple cameras
         String cameraID = cameraIDsList[0];
-        StreamConfigurationMap config = null;
-        try {
-            config = cameraManager_.getCameraCharacteristics(cameraID).get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "CameraAccessException", Toast.LENGTH_SHORT).show();
-            this.finish();
-        }
 
         // Open the camera
         try {
             // TODO: clean this up
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                permissionManager_.requestNextPermissionFromUser();
-                Log.i(LOG_TAG, "Didn't have permissions from user");
-            }
             cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
-            Log.e(LOG_TAG, "Camera manager opened camera " + cameraID);
+            Log.e(LOG_TAG, "Camera manager requested to open camera " + cameraID);
         } catch (CameraAccessException e) {
             e.printStackTrace();
             this.finish();
+            return;
         }
-
-        // Set up preview
-        previewSurface_ = new SurfaceView(this);
-        previewHolder_ = previewSurface_.getHolder();
-//        Size[] potentialPreviewSizes = config.getOutputSizes(previewSurface_.getClass());
-//        Log.e(LOG_TAG, "potentialPreviewSizes: " + Arrays.toString(potentialPreviewSizes));
-//        Arrays.sort(potentialPreviewSizes);
-        previewHolder_.setSizeFromLayout();
-        ConstraintLayout previewLayout = findViewById(R.id.previewLayout);
-        previewLayout.addView(previewSurface_);
-
-        try {
-            cameraDevice_.createCaptureSession(Collections.singletonList(previewHolder_.getSurface()), sessionStateCallback_, null);
-            CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            cameraCaptureSession_.setRepeatingRequest(requestBuilder.build(), sessionCaptureCallback_, null);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-        */
     }
 
 }
