@@ -2,6 +2,7 @@ package bio.savvy.musiccamera;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.support.annotation.DrawableRes;
@@ -9,7 +10,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 
 class PermissionManager {
@@ -72,6 +72,8 @@ class PermissionManager {
         /* This pattern of checking for a permission then returning lets us ask for the permissions
         one by one by alternating control between this method and onRequestPermissionsResult().
          */
+
+        // TODO: replace the title and text with strings built from the permission string itself
 
         if(!havePermission(Manifest.permission.CAMERA)) {
             requestPermissionFromUser(Manifest.permission.CAMERA, R.string.title_camera_permission_dialog,

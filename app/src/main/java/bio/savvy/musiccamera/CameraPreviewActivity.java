@@ -1,6 +1,7 @@
 package bio.savvy.musiccamera;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -8,8 +9,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -22,7 +21,7 @@ import java.util.Collections;
 import static android.support.constraint.ConstraintLayout.*;
 
 
-public class CameraPreviewActivity extends AppCompatActivity {
+public class CameraPreviewActivity extends Activity {
 
     // Logging
     private static final String LOG_TAG = "CameraPreviewActivity";
@@ -49,12 +48,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                         try {
                             CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                             requestBuilder.addTarget(previewHolder_.getSurface());
-                            session.setRepeatingRequest(requestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                                @Override
-                                public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
-                                    super.onCaptureStarted(session, request, timestamp, frameNumber);
-                                }
-                            }, null);
+                            session.setRepeatingRequest(requestBuilder.build(), new CameraCaptureSession.CaptureCallback(){}, null);
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
@@ -89,12 +83,9 @@ public class CameraPreviewActivity extends AppCompatActivity {
             Log.e(LOG_TAG, "cameraDevice_ set to " + cameraDevice_.toString());
 
             // Set up preview
-//            previewSurfaceView_ = new SurfaceView(CameraPreviewActivity.this);
-            previewSurfaceView_ = findViewById(R.id.previewSurfaceView);
             previewHolder_ = previewSurfaceView_.getHolder();
 //            previewHolder_.addCallback(surfaceHolderCallback_);
-//            previewSurfaceView_.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT));
-//            ((ConstraintLayout) findViewById(R.id.previewLayout)).addView(previewSurfaceView_);
+            // TODO: Refactor the SurfaceView and callback into another class so we don't have to do this
             surfaceHolderCallback_.surfaceCreated(previewHolder_);
             Log.e(LOG_TAG, "View added");
         }
@@ -122,6 +113,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
         Log.i(LOG_TAG, "starting onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_preview);
+        previewSurfaceView_ = findViewById(R.id.previewSurfaceView);
 
         // Check permissions, and request if necessary
         // This will set up the preview for us too
@@ -137,6 +129,20 @@ public class CameraPreviewActivity extends AppCompatActivity {
         else {
             instantiatePreview();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        this.getWindow().getDecorView().setSystemUiVisibility(
+                SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | SYSTEM_UI_FLAG_FULLSCREEN
+                        | SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        );
     }
 
     @Override
@@ -182,6 +188,8 @@ public class CameraPreviewActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressWarnings("UnnecessaryReturnStatement")
+    // TODO: Rename this
     private void instantiatePreview() {
         // TODO: Check if the preview has already been instantiated -- if so, return
 
