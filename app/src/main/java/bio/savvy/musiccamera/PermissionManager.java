@@ -21,13 +21,12 @@ class PermissionManager {
     private final String[] allPermissions_;
 
     // Logging
-    private final String LOG_TAG;
+    private static final String LOG_TAG = "PermissionManager";
 
 
-    public PermissionManager(@NonNull final Activity activity, @NonNull String[] permissions, @NonNull String logTag) {
+    public PermissionManager(@NonNull final Activity activity, @NonNull String[] permissions) {
         this.activity_ = activity;
         this.allPermissions_ = permissions;
-        this.LOG_TAG = logTag;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

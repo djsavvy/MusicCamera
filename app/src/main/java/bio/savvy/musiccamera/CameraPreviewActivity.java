@@ -1,25 +1,21 @@
 package bio.savvy.musiccamera;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureRequest;
-import android.support.annotation.NonNull;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
 import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.widget.Toast;
 
 import java.util.Arrays;
-import java.util.Collections;
 
-import static android.support.constraint.ConstraintLayout.*;
-
+import static android.view.View.*;
 
 public class CameraPreviewActivity extends Activity {
 
@@ -29,105 +25,58 @@ public class CameraPreviewActivity extends Activity {
     // Permissions
     private PermissionManager permissionManager_;
 
-    // Camera management
+    // Camera management and preview
     private CameraManager cameraManager_;
-    private CameraDevice cameraDevice_;
-
-    private final SurfaceHolder.Callback surfaceHolderCallback_ = new SurfaceHolder.Callback() {
-        @Override
-        public void surfaceCreated(SurfaceHolder holder) {
-            try {
-                        /* TODO: This is never getting called -- to fix this, create my own CameraPreview class that extends SurfaceView and implements SurfaceHolder.Callback
-                        https://stackoverflow.com/questions/5912053/surfacecreated-is-not-called
-                         */
-                Log.e(LOG_TAG, "Surface Created");
-//                        previewHolder_.setSizeFromLayout();
-                cameraDevice_.createCaptureSession(Collections.singletonList(previewHolder_.getSurface()), new CameraCaptureSession.StateCallback() {
-                    @Override
-                    public void onConfigured(@NonNull CameraCaptureSession session) {
-                        try {
-                            CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                            requestBuilder.addTarget(previewHolder_.getSurface());
-                            session.setRepeatingRequest(requestBuilder.build(), new CameraCaptureSession.CaptureCallback(){}, null);
-                        } catch (CameraAccessException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
-                    }
-                }, null);
-            }
-            catch (CameraAccessException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-        }
-
-        @Override
-        public void surfaceDestroyed(SurfaceHolder holder) {
-
-        }
-    };
+    private CameraPreview preview_;
 
     private final CameraDevice.StateCallback deviceStateCallback_ = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
-            cameraDevice_ = camera;
-            Log.e(LOG_TAG, "cameraDevice_ set to " + cameraDevice_.toString());
+            Log.e(LOG_TAG, "Camera device set to " + camera.toString());
 
-            // Set up preview
-            previewHolder_ = previewSurfaceView_.getHolder();
-//            previewHolder_.addCallback(surfaceHolderCallback_);
-            // TODO: Refactor the SurfaceView and callback into another class so we don't have to do this
-            surfaceHolderCallback_.surfaceCreated(previewHolder_);
-            Log.e(LOG_TAG, "View added");
+            // Create preview and add it to activity
+            preview_ = new CameraPreview(CameraPreviewActivity.this, camera);
+            ConstraintLayout layout = findViewById(R.id.previewLayout);
+            layout.addView(preview_);
         }
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
             camera.close();
-            cameraDevice_ = null;
-            Log.i(LOG_TAG, "CameraDevice disconnected");
+            Log.i(LOG_TAG, "Camera device disconnected");
         }
 
         @Override
         public void onError(@NonNull CameraDevice camera, int error) {
             this.onDisconnected(camera);
+            Log.i(LOG_TAG, "Camera device error");
         }
     };
-
-    // Preview
-    private SurfaceView previewSurfaceView_;
-    private SurfaceHolder previewHolder_;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.i(LOG_TAG, "starting onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_preview);
-        previewSurfaceView_ = findViewById(R.id.previewSurfaceView);
+        preview_ = null;
 
-        // Check permissions, and request if necessary
-        // This will set up the preview for us too
+        /*
+        Check permissions, and request if necessary
+        This will set up the preview for us too
+        */
         permissionManager_ = new PermissionManager(this,
                 new String[]{Manifest.permission.CAMERA,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                LOG_TAG);
-        // If we add a permission, make sure to add it to manifest, as well as edit PermissionManager.requestNextPermissionFromUser()
-
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE}
+        );
+        /*
+        If we add a permission, make sure to add it to manifest,
+        as well as edit PermissionManager.requestNextPermissionFromUser()
+         */
         if(!permissionManager_.haveAllPermissions()) {
             permissionManager_.requestNextPermissionFromUser();
         }
         else {
-            instantiatePreview();
+            initializePreview();
         }
     }
 
@@ -152,7 +101,7 @@ public class CameraPreviewActivity extends Activity {
             permissionManager_.requestNextPermissionFromUser();
         } else {
             // Permissions granted -- set up preview
-            instantiatePreview();
+            initializePreview();
         }
     }
 
@@ -188,10 +137,12 @@ public class CameraPreviewActivity extends Activity {
         }
     }
 
-    @SuppressWarnings("UnnecessaryReturnStatement")
-    // TODO: Rename this
-    private void instantiatePreview() {
-        // TODO: Check if the preview has already been instantiated -- if so, return
+    @SuppressLint("MissingPermission")
+    private void initializePreview() {
+        if(preview_ != null) {
+            Log.i(LOG_TAG, "CameraPreview already exists");
+            return;
+        }
 
         Log.i(LOG_TAG, "Instantiating preview");
 
@@ -207,7 +158,6 @@ public class CameraPreviewActivity extends Activity {
 
         // Open the camera
         try {
-            // TODO: clean this up
             cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
             Log.e(LOG_TAG, "Camera manager requested to open camera " + cameraID);
         } catch (CameraAccessException e) {
