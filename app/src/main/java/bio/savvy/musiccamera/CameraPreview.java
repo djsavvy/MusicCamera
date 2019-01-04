@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.SurfaceHolder;
 
@@ -27,33 +28,40 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         return cameraDevice_;
     }
 
+    private CameraCaptureSession.StateCallback createCaptureSessionStateCallback(final SurfaceHolder holder) {
+        return new CameraCaptureSession.StateCallback() {
+            @Override
+            public void onConfigured(@NonNull CameraCaptureSession session) {
+                try {
+                    CaptureRequest.Builder requestBuilder =
+                            cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                    requestBuilder.addTarget(holder.getSurface());
+                    session.setRepeatingRequest(requestBuilder.build(),
+                            new CameraCaptureSession.CaptureCallback() {
+                            }, null);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                // TODO: fail gracefully
+            }
+        };
+    }
+
     @Override
     public void surfaceCreated(final SurfaceHolder holder) {
         try {
-            Log.e(LOG_TAG, "Surface Created");
+            Log.d(LOG_TAG, "Surface Created");
 
             // TODO: set size of preview
 
             cameraDevice_.createCaptureSession(
                     Collections.singletonList(holder.getSurface()),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            try {
-                                CaptureRequest.Builder requestBuilder = cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                                requestBuilder.addTarget(holder.getSurface());
-                                session.setRepeatingRequest(requestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                                }, null);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
-                        }
-                    }, null);
+                    createCaptureSessionStateCallback(holder),
+                    null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -66,7 +74,9 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        cameraDevice_.close();
+        if(cameraDevice_ != null) {
+            cameraDevice_.close();
+        }
         cameraDevice_ = null;
     }
 }

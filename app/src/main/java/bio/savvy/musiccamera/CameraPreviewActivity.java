@@ -32,7 +32,10 @@ public class CameraPreviewActivity extends Activity {
     private final CameraDevice.StateCallback deviceStateCallback_ = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
-            Log.e(LOG_TAG, "Camera device set to " + camera.toString());
+            // Check for camera device already opened
+            destroyPreview();
+
+            Log.d(LOG_TAG, "Camera device set to " + camera.toString());
 
             // Create preview and add it to activity
             preview_ = new CameraPreview(CameraPreviewActivity.this, camera);
@@ -42,14 +45,16 @@ public class CameraPreviewActivity extends Activity {
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
+            Log.d(LOG_TAG, "Camera device " + camera.toString() + " disconnected");
             camera.close();
-            Log.i(LOG_TAG, "Camera device disconnected");
+
+            destroyPreview();
         }
 
         @Override
         public void onError(@NonNull CameraDevice camera, int error) {
             this.onDisconnected(camera);
-            Log.i(LOG_TAG, "Camera device error");
+            Log.d(LOG_TAG, "Camera device " + camera.toString() + " error");
         }
     };
 
@@ -72,17 +77,28 @@ public class CameraPreviewActivity extends Activity {
         If we add a permission, make sure to add it to manifest,
         as well as edit PermissionManager.requestNextPermissionFromUser()
          */
+
+        // Pass control to onResume(), which will initialize the preview
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        destroyPreview();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Initialize preview
         if(!permissionManager_.haveAllPermissions()) {
             permissionManager_.requestNextPermissionFromUser();
         }
         else {
             initializePreview();
         }
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
         this.getWindow().getDecorView().setSystemUiVisibility(
                 SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | SYSTEM_UI_FLAG_FULLSCREEN
@@ -140,11 +156,11 @@ public class CameraPreviewActivity extends Activity {
     @SuppressLint("MissingPermission")
     private void initializePreview() {
         if(preview_ != null) {
-            Log.i(LOG_TAG, "CameraPreview already exists");
+            Log.d(LOG_TAG, "CameraPreview already exists");
             return;
         }
 
-        Log.i(LOG_TAG, "Instantiating preview");
+        Log.d(LOG_TAG, "Initializing preview");
 
         // Initialize camera management
         initializeCameraManager();
@@ -159,7 +175,7 @@ public class CameraPreviewActivity extends Activity {
         // Open the camera
         try {
             cameraManager_.openCamera(cameraID, deviceStateCallback_, null);
-            Log.e(LOG_TAG, "Camera manager requested to open camera " + cameraID);
+            Log.d(LOG_TAG, "Camera manager requested to open camera " + cameraID);
         } catch (CameraAccessException e) {
             e.printStackTrace();
             this.finish();
@@ -167,4 +183,12 @@ public class CameraPreviewActivity extends Activity {
         }
     }
 
+    private void destroyPreview() {
+        if(preview_ != null) {
+            Log.d(LOG_TAG, "Destroying preview");
+            ConstraintLayout layout = findViewById(R.id.previewLayout);
+            layout.removeView(preview_);
+            preview_ = null;
+        }
+    }
 }

@@ -51,7 +51,8 @@ class PermissionManager {
     public void requestPermissionFromUser(final String permission, @StringRes int dialogTitle, @StringRes int dialogText, @DrawableRes int iconID) {
         // Show request permission rationale
         Log.i(LOG_TAG, "Requesting permission " + permission + " from user.");
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity_, android.R.style.Theme_Material_Dialog_Alert);
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity_,
+                android.R.style.Theme_Material_Dialog_Alert);
         alertBuilder.setTitle(dialogTitle)
                 .setMessage(dialogText)
                 .setPositiveButton(android.R.string.ok, null)
