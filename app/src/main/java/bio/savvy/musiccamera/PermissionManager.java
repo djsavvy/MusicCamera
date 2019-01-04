@@ -24,20 +24,20 @@ class PermissionManager {
     private static final String LOG_TAG = "PermissionManager";
 
 
-    public PermissionManager(@NonNull final Activity activity, @NonNull String[] permissions) {
+    PermissionManager(@NonNull final Activity activity, @NonNull String[] permissions) {
         this.activity_ = activity;
         this.allPermissions_ = permissions;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    public boolean haveAllPermissions() {
+    boolean haveAllPermissions() {
         for(String p : allPermissions_) {
             if(!havePermission(p)) return false;
         }
         return true;
     }
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    @SuppressWarnings({"BooleanMethodIsAlwaysInverted", "WeakerAccess"})
     public boolean havePermission(String permission) {
         return (ContextCompat.checkSelfPermission(activity_, permission) == PackageManager.PERMISSION_GRANTED);
     }
@@ -48,7 +48,7 @@ class PermissionManager {
         // Control is transferred to onRequestPermissionsResult() from here
     }
 
-    public void requestPermissionFromUser(final String permission, @StringRes int dialogTitle, @StringRes int dialogText, @DrawableRes int iconID) {
+    private void requestPermissionFromUser(final String permission, @StringRes int dialogTitle, @StringRes int dialogText, @DrawableRes int iconID) {
         // Show request permission rationale
         Log.i(LOG_TAG, "Requesting permission " + permission + " from user.");
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity_,
@@ -68,7 +68,7 @@ class PermissionManager {
     }
 
     @SuppressWarnings("UnnecessaryReturnStatement")
-    public void requestNextPermissionFromUser() {
+    void requestNextPermissionFromUser() {
         /* This pattern of checking for a permission then returning lets us ask for the permissions
         one by one by alternating control between this method and onRequestPermissionsResult().
          */

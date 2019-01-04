@@ -1,5 +1,6 @@
 package bio.savvy.musiccamera;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -7,12 +8,12 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.support.annotation.NonNull;
 import android.util.Log;
-import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.SurfaceHolder;
 
 import java.util.Collections;
 
+@SuppressLint("ViewConstructor")
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String LOG_TAG = "CameraPreview";
@@ -22,10 +23,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         super(context);
         getHolder().addCallback(this);
         this.cameraDevice_ = cameraDevice;
-    }
-
-    public CameraDevice getCameraDevice() {
-        return cameraDevice_;
     }
 
     private CameraCaptureSession.StateCallback createCaptureSessionStateCallback(final SurfaceHolder holder) {

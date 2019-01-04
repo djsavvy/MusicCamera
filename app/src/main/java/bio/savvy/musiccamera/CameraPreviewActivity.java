@@ -179,7 +179,6 @@ public class CameraPreviewActivity extends Activity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
             this.finish();
-            return;
         }
     }
 
